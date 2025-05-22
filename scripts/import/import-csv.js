@@ -22,39 +22,12 @@ const STRAPI_TOKEN = process.env.STRAPI_TOKEN; // API token needs to be set as e
 
 // Import mapping configuration
 const importConfig = {
-  'Blog.csv': {
-    contentType: 'blogs',
-    fieldMap: {
-      'Slug': 'slug',
-      'Title': 'title',
-      'Date': 'date',
-      'Categry': 'category', // Typo in original CSV
-      'Tag': 'tag',
-      'Thumbnail': null, // Will be handled specially for media
-      'Featured': (val) => val === 'true', // Convert string to boolean
-      'Author': async (val, strapi) => {
-        // Look up author by slug and return the ID
-        try {
-          const response = await strapi.get(`/api/authors?filters[slug]=${val}&populate=*`);
-          if (response.data.data && response.data.data.length > 0) {
-            return response.data.data[0].id;
-          }
-          return null;
-        } catch (error) {
-          console.error(`Error looking up author: ${val}`, error.message);
-          return null;
-        }
-      },
-      'Blurb': 'blurb',
-      'Content': 'content'
-    }
-  },
   'Authors.csv': {
     contentType: 'authors',
     fieldMap: {
       'Slug': 'slug',
       'Title': 'title',
-      'Image': null, // Will be handled specially for media
+      'Image': 'image',
       'Content': 'content'
     }
   },
@@ -63,13 +36,13 @@ const importConfig = {
     fieldMap: {
       'Slug': 'slug',
       'Name': 'name',
-      'Headshot': null, // Will be handled specially for media
+      'Headshot': 'headshot',
       'Chapter': 'chapter',
       'X': 'x',
       'LinkedIn': 'linkedin',
       'Firm URL': 'firm_url',
       'Logo URL': 'logo_url',
-      'Logo': null, // Will be handled specially for media
+      'Logo': 'logo',
       'Type': 'type',
       'Firm': 'firm',
       'Bio': 'bio'
@@ -80,7 +53,7 @@ const importConfig = {
     fieldMap: {
       'Slug': 'slug',
       'Title': 'title',
-      'Image': null, // Will be handled specially for media
+      'Image': 'image',
       'Type': 'type',
       'Content': 'content'
     }
@@ -98,6 +71,21 @@ const importConfig = {
       'Firm': 'firm',
       'Host URL': 'host_url',
       'Featured #': 'featured',
+      'Content': 'content'
+    }
+  },
+  'Blog.csv': {
+    contentType: 'blogs',
+    fieldMap: {
+      'Slug': 'slug',
+      'Title': 'title',
+      'Date': 'date',
+      'Categry': 'category', // Typo in original CSV
+      'Tag': 'tag',
+      'Thumbnail': 'thumbnail',
+      'Featured': 'featured', // Convert string to boolean in processRecord function
+      'Author': 'author', // Will be handled in processRecord function
+      'Blurb': 'blurb',
       'Content': 'content'
     }
   }
@@ -131,6 +119,52 @@ function readCSV(filePath) {
 }
 
 /**
+ * Process a record before sending to Strapi
+ * @param {Object} record - CSV record
+ * @param {Object} fieldMap - Field mapping configuration
+ * @param {string} contentType - Content type name
+ * @returns {Object} - Processed record
+ */
+async function processRecord(record, fieldMap, contentType) {
+  const data = {};
+
+  // Map fields from CSV to Strapi fields
+  for (const [csvField, strapiField] of Object.entries(fieldMap)) {
+    if (!strapiField) continue; // Skip fields that are not mapped
+    
+    const value = record[csvField];
+    
+    // Skip null or undefined values
+    if (value === null || value === undefined || value === '') {
+      continue;
+    }
+    
+    // Special case for Featured field in Blog
+    if (csvField === 'Featured' && contentType === 'blogs') {
+      data[strapiField] = value === 'true';
+      continue;
+    }
+    
+    // Special case for Author relation in Blog
+    if (csvField === 'Author' && contentType === 'blogs' && value) {
+      try {
+        const response = await strapi.get(`/api/authors?filters[slug]=${value}`);
+        if (response.data.data && response.data.data.length > 0) {
+          data[strapiField] = { connect: [response.data.data[0].id] };
+        }
+      } catch (error) {
+        console.error(`Error looking up author: ${value}`, error.message);
+      }
+      continue;
+    }
+    
+    data[strapiField] = value;
+  }
+  
+  return data;
+}
+
+/**
  * Import data from a CSV file into Strapi
  * @param {string} fileName - Name of the CSV file
  */
@@ -156,35 +190,18 @@ async function importCSV(fileName) {
 
   for (const [index, record] of records.entries()) {
     try {
-      // Create entry data
-      const entryData = { data: {} };
-
-      // Map fields
-      for (const [csvField, strapiField] of Object.entries(fieldMap)) {
-        if (!strapiField) continue; // Skip fields that are not mapped
-
-        const value = record[csvField];
-        
-        // If the field mapping is a function, call it to transform the value
-        if (typeof strapiField === 'function') {
-          entryData.data[csvField] = await strapiField(value, strapi);
-        } else {
-          entryData.data[strapiField] = value;
-        }
-      }
-
-      // Handle media fields here if needed
-      // For now, we'll just use the URLs as strings
-
+      // Process record
+      const data = await processRecord(record, fieldMap, contentType);
+      
       // Create the entry in Strapi
-      const response = await strapi.post(`/api/${contentType}`, entryData);
+      const response = await strapi.post(`/api/${contentType}`, { data });
       
       console.log(`Successfully imported record ${index + 1}/${records.length} into ${contentType}`);
       successCount++;
     } catch (error) {
       console.error(`Error importing record ${index + 1}/${records.length} from ${fileName}:`, error.message);
-      if (error.response) {
-        console.error('Response data:', error.response.data);
+      if (error.response && error.response.data) {
+        console.error('Response data:', JSON.stringify(error.response.data, null, 2));
       }
     }
   }
@@ -208,6 +225,7 @@ async function importAllCSVs() {
     }
 
     // Import each CSV file based on the importConfig
+    // The order matters here - we need to import authors before blogs to establish the relation
     for (const fileName of Object.keys(importConfig)) {
       const filePath = path.join(CSV_DIR, fileName);
       
