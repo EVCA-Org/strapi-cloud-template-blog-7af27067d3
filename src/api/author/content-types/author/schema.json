@@ -12,17 +12,29 @@
   },
   "pluginOptions": {},
   "attributes": {
-    "name": {
-      "type": "string"
+    "title": {
+      "type": "string",
+      "required": true
     },
-    "avatar": {
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "image": {
       "type": "media",
       "multiple": false,
       "required": false,
-      "allowedTypes": ["images", "files", "videos"]
+      "allowedTypes": ["images"]
     },
-    "email": {
-      "type": "string"
+    "content": {
+      "type": "richtext"
+    },
+    "blogs": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::blog.blog",
+      "mappedBy": "author"
     },
     "articles": {
       "type": "relation",

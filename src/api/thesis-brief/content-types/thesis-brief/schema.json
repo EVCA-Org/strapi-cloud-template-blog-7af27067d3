@@ -1,0 +1,64 @@
+{
+  "kind": "collectionType",
+  "collectionName": "thesis_briefs",
+  "info": {
+    "singularName": "thesis-brief",
+    "pluralName": "thesis-briefs",
+    "displayName": "Thesis Brief",
+    "description": "Thesis brief content"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "cover_image_url": {
+      "type": "string"
+    },
+    "investor_headshot_url": {
+      "type": "string"
+    },
+    "publish_date": {
+      "type": "datetime"
+    },
+    "type": {
+      "type": "string"
+    },
+    "investor_name": {
+      "type": "string"
+    },
+    "firm": {
+      "type": "string"
+    },
+    "host_url": {
+      "type": "string"
+    },
+    "featured": {
+      "type": "integer"
+    },
+    "content": {
+      "type": "richtext"
+    },
+    "cover_image": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "investor_headshot": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    }
+  }
+}
