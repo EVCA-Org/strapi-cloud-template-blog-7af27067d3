@@ -1,0 +1,171 @@
+# Strapi Cloud Content Type Migration Process
+
+This document outlines the process we followed to migrate content types from CSV files to a Strapi Cloud project, with the goal of establishing a repeatable workflow for future updates.
+
+## Overview
+
+We successfully implemented a workflow that allows for creating and updating content types in a Strapi Cloud project by:
+
+1. Cloning the GitHub repository connected to Strapi Cloud
+2. Creating content types directly by modifying the project files
+3. Committing and pushing changes to GitHub
+4. Deploying to Strapi Cloud (happens automatically when GitHub is connected)
+
+## Content Types Created
+
+Based on the CSV files provided, we created the following content types:
+
+### 1. Blog
+- **Fields**:
+  - title (string, required)
+  - slug (uid, required)
+  - date (datetime)
+  - category (string)
+  - tag (string)
+  - thumbnail (media)
+  - featured (boolean)
+  - author (relation to Author)
+  - blurb (text)
+  - content (richtext, required)
+
+### 2. Author (Updated)
+- **Fields**:
+  - title (string, required)
+  - slug (uid, required)
+  - image (media)
+  - content (richtext)
+  - blogs (relation to Blog)
+  - articles (relation to Article)
+
+### 3. EVCA Team
+- **Fields**:
+  - name (string, required)
+  - slug (uid, required)
+  - headshot (media)
+  - chapter (string)
+  - x (string)
+  - linkedin (string)
+  - firm_url (string)
+  - logo_url (string)
+  - logo (media)
+  - type (string)
+  - firm (string)
+  - bio (richtext)
+
+### 4. Chapter Image
+- **Fields**:
+  - title (string, required)
+  - slug (uid, required)
+  - image (media)
+  - type (enumeration: Vertical, City)
+  - content (richtext)
+
+### 5. Thesis Brief
+- **Fields**:
+  - title (string, required)
+  - slug (uid, required)
+  - cover_image_url (string)
+  - investor_headshot_url (string)
+  - publish_date (datetime)
+  - type (string)
+  - investor_name (string)
+  - firm (string)
+  - host_url (string)
+  - featured (integer)
+  - content (richtext)
+  - cover_image (media)
+  - investor_headshot (media)
+
+## Step-by-Step Process
+
+### 1. Clone the GitHub Repository
+
+```bash
+git clone https://github.com/EVCA-Org/strapi-cloud-template-blog-7af27067d3
+cd strapi-cloud-template-blog-7af27067d3
+```
+
+### 2. Create Directory Structure for Content Types
+
+For each content type, we created the necessary directory structure:
+
+```bash
+mkdir -p src/api/[content-type]/content-types/[content-type]
+mkdir -p src/api/[content-type]/controllers
+mkdir -p src/api/[content-type]/routes
+mkdir -p src/api/[content-type]/services
+```
+
+### 3. Create Schema Files
+
+For each content type, we created:
+
+- `schema.json` file in `src/api/[content-type]/content-types/[content-type]/`
+- `index.js` file in `src/api/[content-type]/content-types/[content-type]/`
+- `index.js` file in `src/api/[content-type]/content-types/`
+- Controller, service, and route files
+
+#### Example schema.json
+
+```json
+{
+  "kind": "collectionType",
+  "collectionName": "blogs",
+  "info": {
+    "singularName": "blog",
+    "pluralName": "blogs",
+    "displayName": "Blog",
+    "description": "Blog posts"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    // Additional fields...
+  }
+}
+```
+
+### 4. Commit and Push Changes
+
+```bash
+git add .
+git commit -m "Add content types based on CSV structure"
+git push origin main
+```
+
+### 5. Verify Deployment
+
+Once the changes are pushed to GitHub, Strapi Cloud will automatically deploy the updated content types if automatic deployments are enabled. Otherwise, a manual deployment can be triggered from the Strapi Cloud dashboard.
+
+## Benefits of This Approach
+
+1. **No Local Server Required**: This approach allows for creating and updating content types without needing to run the Strapi server locally or creating an admin account.
+
+2. **Version Control**: All changes are tracked in Git, providing a history of content type modifications.
+
+3. **Collaborative Workflow**: Multiple team members can work on different content types and merge their changes.
+
+4. **Automated Deployments**: When connected to GitHub, Strapi Cloud can automatically deploy changes when pushed to the main branch.
+
+## Future Improvements
+
+1. **Script Automation**: Create scripts to automatically generate content types from CSV files.
+
+2. **Data Import**: After deploying content types, use Strapi's import/export functionality to populate them with data from the CSV files.
+
+3. **CI/CD Pipeline**: Set up GitHub Actions to validate content type changes before they're deployed to Strapi Cloud.
+
+## Conclusion
+
+This process provides a streamlined approach to creating and updating content types in Strapi Cloud based on CSV data. By working directly with the schema files and leveraging Git for version control, we've established a reliable workflow that can be repeated for future updates.
